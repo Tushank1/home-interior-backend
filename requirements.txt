@@ -1,0 +1,11 @@
+fastapi[standard]
+uvicorn[standard]
+SQLAlchemy
+pydantic-settings
+asyncpg
+passlib
+psycopg2-binary
+passlib
+bcrypt==3.2.2
+pyjwt[crypto]
+alembic

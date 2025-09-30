@@ -1,0 +1,70 @@
+name: home_interior
+services:
+  interior-api:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile 
+    container_name: interior_api
+    restart: always
+    ports:
+      - "192.168.1.6:6005:8000"
+    volumes:
+      - ../app:/app/app
+      - ../keys:/app/keys
+      - ../uploads:/app/uploads
+      - ../migration:/app/migration
+      - ../generate_migration.py:/app/generate_migration.py
+    environment:
+      - DATABASE_URL_ASYNC=postgresql+asyncpg://Home:tushank_home@db:5432/Home
+      - DATABASE_URL_SYNC=postgresql://Home:tushank_home@db:5432/Home
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys,urllib.request\ntry:\n  with urllib.request.urlopen('http://localhost:8000/api/v1/health/', timeout=5) as r:\n    sys.exit(0 if r.status==200 else 1)\nexcept Exception:\n  sys.exit(1)\nPY"] 
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  db: 
+    image: postgres:16
+    container_name: interior_db
+    restart: always
+    environment:
+      POSTGRES_DB: Home
+      POSTGRES_USER: Home
+      POSTGRES_PASSWORD: tushank_home
+    ports:
+      - "6015:5432"
+    volumes:
+      - interiordata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Home -d Home"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  interior-pgadmin:
+    image: dpage/pgadmin4
+    container_name: interior_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: interior@gmail.com 
+      PGADMIN_DEFAULT_PASSWORD: interior@321
+    ports:
+      - "192.168.1.6:6050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 - <<'PY'\nimport sys,urllib.request\ntry:\n  with urllib.request.urlopen('http://localhost/', timeout=5) as r:\n    sys.exit(0 if r.status==200 else 1)\nexcept Exception:\n  sys.exit(1)\nPY"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  interiordata:
